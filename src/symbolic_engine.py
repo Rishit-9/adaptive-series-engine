@@ -10,6 +10,7 @@ class SymbolicExpansionEngine:
     """
     def __init__(self):
         self.x = sp.Symbol('x')
+        self.y = sp.Symbol('y') # Added for multi-variable support
 
     def taylor_expansion(self, sym_func, x_vals, center=0.0, n_terms=8):
         """
@@ -89,3 +90,43 @@ class SymbolicExpansionEngine:
             basis_matrix[:, i] = np.polynomial.chebyshev.chebval(x_vals, coeffs)
 
         return c_base, basis_matrix
+
+    def taylor_expansion_2d(self, sym_func, x_vals, y_vals, center=(0.0, 0.0), degree=2):
+        """
+        Multi-variable Taylor Expansion for 2D inputs.
+        Extracts C_base and flattens the 2D grid into a basis matrix for neural processing.
+        """
+        c_base = []
+        basis_terms = []
+        
+        # Generate and flatten 2D grid
+        X, Y = np.meshgrid(x_vals, y_vals)
+        X_flat = X.flatten()
+        Y_flat = Y.flatten()
+        
+        # Degree 0
+        val_0 = float(sym_func.subs({self.x: center[0], self.y: center[1]}).evalf())
+        c_base.append(val_0)
+        basis_matrix = [np.ones_like(X_flat)]
+        
+        # Degree 1
+        if degree >= 1:
+            df_dx = sp.diff(sym_func, self.x)
+            df_dy = sp.diff(sym_func, self.y)
+            c_base.append(float(df_dx.subs({self.x: center[0], self.y: center[1]}).evalf()))
+            c_base.append(float(df_dy.subs({self.x: center[0], self.y: center[1]}).evalf()))
+            basis_matrix.extend([X_flat - center[0], Y_flat - center[1]])
+            
+        # Degree 2
+        if degree >= 2:
+            d2f_dx2 = sp.diff(df_dx, self.x)
+            d2f_dy2 = sp.diff(df_dy, self.y)
+            d2f_dxdy = sp.diff(df_dx, self.y)
+            
+            c_base.append(float(d2f_dx2.subs({self.x: center[0], self.y: center[1]}).evalf()) / 2.0)
+            c_base.append(float(d2f_dy2.subs({self.x: center[0], self.y: center[1]}).evalf()) / 2.0)
+            c_base.append(float(d2f_dxdy.subs({self.x: center[0], self.y: center[1]}).evalf()))
+            
+            basis_matrix.extend([(X_flat - center[0])**2, (Y_flat - center[1])**2, (X_flat - center[0])*(Y_flat - center[1])])
+
+        return np.array(c_base, dtype=np.float32), np.column_stack(basis_matrix), X, Y
