@@ -49,7 +49,7 @@ adaptive-series-engine/
 AFAE is packaged as a deployable Python library. You can install it locally for development and testing:
 
 ```bash
-git clone https://github.com/your-username/adaptive-series-engine.git
+git clone https://github.com/Rishit-9/adaptive-series-engine.git
 cd adaptive-series-engine
 pip install -e .
 ```
