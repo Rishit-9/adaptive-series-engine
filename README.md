@@ -19,8 +19,9 @@ The engine is deployed as a live interactive API. You can test the endpoints and
 
 ## Key Features
 
-* **RESTful API Deployment:** Fully interactive web interface powered by FastAPI for instant function approximation and basis routing.
-* **Symbolic Base Generation:** Exact N-th order symbolic differentiation for Taylor series, numerical quadrature for Fourier harmonics, and orthogonal Chebyshev node interpolation.
+* **Intelligent Auto-Routing:** Analyzes function variance, smoothness, and periodicity to dynamically select the optimal mathematical basis (Taylor, Fourier, or Chebyshev).
+* **RESTful API Deployment:** Fully interactive web interface powered by FastAPI for instant function approximation.
+* **Symbolic Base Generation:** Exact N-th order symbolic differentiation, numerical quadrature for Fourier harmonics, and orthogonal Chebyshev node interpolation.
 * **Neuro-Symbolic Weight Anchoring:** Custom Keras `HybridSeriesLayer` initializes network weights directly from symbolic coefficients, drastically reducing convergence time.
 * **Oscillation-Damped Custom Loss:** Combines Mean Squared Error (MSE), <i>L</i><sub>∞</sub> maximum overshoot suppression, Total Variation (TV) derivative smoothing, and <i>L</i><sub>2</sub> anchor regularization.
 
@@ -29,41 +30,44 @@ The engine is deployed as a live interactive API. You can test the endpoints and
 ```text
 adaptive-series-engine/
 ├── src/
-│   ├── __init__.py
-│   ├── symbolic_engine.py      # Symbolic & numerical basis expansion generators
-│   ├── router.py               # Adaptive routing logic for basis selection
-│   └── neural_optimizer.py     # Custom TensorFlow layer and hybrid loss optimizer
-├── main.py                     # FastAPI application wrapper
-├── prototype.py                # Single-variable benchmark & plotting suite
-├── requirements.txt            # Package dependencies
-└── README.md                   # Documentation
+│   ├── __init__.py            
+│   ├── neural_optimizer.py     
+│   ├── router.py               
+│   └── symbolic_engine.py      
+├── Dockerfile               
+├── README.md                   
+├── comprehensive_validation.py 
+├── main.py                    
+├── prototype.py                
+├── pyproject.toml              
+├── requirements.txt            
+└── runge_benchmark.py          
 ```
 
 ## Installation
 
-Clone the repository and install the required dependencies (memory-optimized for CPU environments):
+AFAE is packaged as a deployable Python library. You can install it locally for development and testing:
 
 ```bash
 git clone https://github.com/your-username/adaptive-series-engine.git
 cd adaptive-series-engine
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Usage
 
-### 1. Running the API Locally
-To launch the FastAPI server on your local machine:
-
+### 1. Running the Web API Locally
+To launch the FastAPI server on your own machine:
 ```bash
 uvicorn main:app --reload
 ```
-Once running, navigate to `http://127.0.0.1:8000/docs` in your browser to interact with the engine.
+Navigate to `http://127.0.0.1:8000/docs` in your browser to view the local Swagger UI.
 
-### 2. API Request Example
-You can send a POST request to the `/api/v1/optimize/taylor` endpoint to optimize an expression:
+### 2. API Request Example (Auto-Routing)
+You can send a POST request to the `/api/v1/optimize/auto` endpoint. The engine will evaluate the expression, choose the best basis automatically, and apply neural refinement:
 
 ```json
-POST /api/v1/optimize/taylor
+POST /api/v1/optimize/auto
 {
   "expression": "cos(x) * exp(-0.1 * x**2)",
   "x_min": -3.14159,
@@ -74,74 +78,13 @@ POST /api/v1/optimize/taylor
 }
 ```
 
-### 3. Using the Python Library
-Run the local benchmarking suites to visualize Taylor boundary stabilization and Fourier Gibbs suppression:
+*Note: Manual override endpoints (`/optimize/taylor`, `/optimize/fourier`, `/optimize/chebyshev`) are also available if strict basis enforcement is required.*
+
+### 3. Using the Python Library Locally
+Run the built-in benchmarking suites to visualize Taylor boundary stabilization, Fourier Gibbs suppression, and Runge's phenomenon mitigation:
 
 ```bash
 python prototype.py
+python runge_benchmark.py
 python comprehensive_validation.py
-```
-Instead of training black-box neural networks from random initialization, AFAE uses **SymPy** and **SciPy** to compute exact analytical base coefficients (<i>C</i><sub>base</sub>) and hands them off to a custom **TensorFlow** optimization layer. The neural layer refines the coefficients (<i>C</i><sub>refined</sub> = <i>C</i><sub>base</sub> + Δ<i>C</i>) against a multi-objective loss function that penalizes peak overshoot (<i>L</i><sub>∞</sub>) and total variation oscillation.
-
-## Key Features
-
-* **Symbolic Base Generation:** Exact N-th order symbolic differentiation for Taylor series, numerical quadrature for Fourier harmonics, and orthogonal Chebyshev node interpolation.
-* **Neuro-Symbolic Weight Anchoring:** Custom Keras `HybridSeriesLayer` initializes network weights directly from symbolic coefficients, drastically reducing convergence time.
-* **Oscillation-Damped Custom Loss:** Combines Mean Squared Error (MSE), <i>L</i><sub>∞</sub> maximum overshoot suppression, Total Variation (TV) derivative smoothing, and <i>L</i><sub>2</sub> anchor regularization.
-* **Real-Time Convergence Diagnostics:** Built-in Matplotlib visualization comparing static analytical baselines against hybrid refined curves.
-
-## Repository Structure
-
-```text
-adaptive-series-engine/
-├── src/
-│   ├── __init__.py
-│   ├── symbolic_engine.py      # Symbolic & numerical basis expansion generators
-│   └── neural_optimizer.py     # Custom TensorFlow layer and hybrid loss optimizer
-├── prototype.py                # Single-variable benchmark & plotting suite
-├── requirements.txt            # Package dependencies
-└── README.md                   # Documentation
-```
-
-## Installation
-
-Clone the repository and install the required dependencies:
-
-```bash
-git clone [https://github.com/rishit-9/adaptive-series-engine.git](https://github.com/rishit-9/adaptive-series-engine.git)
-cd adaptive-series-engine
-pip install -r requirements.txt
-```
-
-## Quick Start
-
-Run the single-variable benchmark suite to evaluate Taylor boundary stabilization and Fourier Gibbs suppression:
-
-```bash
-python prototype.py
-```
-
-### Example Usage in Python
-
-```python
-import numpy as np
-import sympy as sp
-from src.symbolic_engine import SymbolicExpansionEngine
-from src.neural_optimizer import NeuralCoefficientOptimizer
-
-# 1. Initialize Symbolic Engine
-engine = SymbolicExpansionEngine()
-x_sym = engine.x
-target_expr = sp.cos(x_sym) * sp.exp(-0.1 * x_sym**2)
-target_fn = sp.lambdify(x_sym, target_expr, "numpy")
-
-x_vals = np.linspace(-3.2, 3.2, 400, dtype=np.float32)
-y_true = target_fn(x_vals).astype(np.float32)
-
-# 2. Extract Symbolic Base Coefficients (C_base)
-c_base, basis_matrix = engine.taylor_expansion(target_expr, x_vals, center=0.0, n_terms=7)
-
-# 3. Refine Coefficients via Neural Optimizer (C_refined = C_base + delta_C)
-optimizer = NeuralCoefficientOptimizer(c_base, learning_rate=0.005, alpha_peak=0.1, beta_tv=0.02)
-c_refined, y_hybrid = optimizer.fit(basis_matrix, y_true, epochs=600)
 ```
