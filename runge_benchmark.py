@@ -5,13 +5,12 @@ from src.router import AdaptiveBasisRouter
 
 
 def run_integration_benchmark():
-    print("--- Milestone 3: Integration & Runge's Phenomenon Benchmark ---")
+    print("Integration & Runge's Phenomenon Benchmark ---")
 
     # Runge's function: f(x) = 1 / (1 + 25x^2)
     x_vals = np.linspace(-1, 1, 100, dtype=np.float32)
     y_true = 1.0 / (1.0 + 25.0 * x_vals**2)
     runge_func = lambda x: 1.0 / (1.0 + 25.0 * x**2)
-    runge_expr = "1 / (1 + 25*x**2)"
 
     # 1. Adaptive Routing
     router = AdaptiveBasisRouter()
@@ -20,12 +19,14 @@ def run_integration_benchmark():
 
     # 2. Symbolic Generation
     engine = SymbolicExpansionEngine()
+    runge_sym = 1 / (1 + 25 * engine.x**2)
+
     if selected_basis == "chebyshev":
         c_base, phi_matrix = engine.chebyshev_expansion(runge_func, x_vals, n_terms=11)
     elif selected_basis == "fourier":
         c_base, phi_matrix = engine.fourier_expansion(runge_func, x_vals, n_terms=11)
     elif selected_basis == "taylor":
-        c_base, phi_matrix = engine.taylor_expansion(runge_expr, x_vals, n_terms=11)
+        c_base, phi_matrix = engine.taylor_expansion(runge_sym, x_vals, n_terms=11)
     else:
         raise ValueError(f"Unsupported basis returned by router: {selected_basis}")
 
